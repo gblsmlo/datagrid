@@ -25,6 +25,9 @@
   "linter": {
     "enabled": true,
     "rules": {
+      "correctness": {
+        "noUnusedVariables": "off"
+      },
       "nursery": "off",
       "recommended": true,
       "style": "off"
