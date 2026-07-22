@@ -47,27 +47,41 @@ pnpm add react react-dom @base-ui/react tailwindcss
 
 ### COSS source location
 
-`@tc96/datagrid` is installed from npm and imported from `node_modules`. It does
-not need a `components.json`. Add that file only when the consuming app uses the
-COSS/shadcn CLI. Map the `ui` alias to `components/patterns` so COSS primitives
-are owned by the app in that directory:
+`@tc96/datagrid` supports two installation modes. Use the npm package when you
+want to import it from `node_modules`. Use the bundled registry item when you
+want the source copied into the consuming app.
+
+Keep `ui` mapped to your primitive components and add `patterns` for TC96
+patterns. `patterns` is not a replacement for `ui`:
 
 ```json
 {
   "$schema": "https://ui.shadcn.com/schema.json",
   "tsx": true,
-  "aliases": { "ui": "@/components/patterns" }
+  "aliases": {
+    "components": "@/components",
+    "ui": "@/components/ui",
+    "patterns": "@/components/patterns"
+  }
 }
 ```
 
-Then run `pnpm dlx shadcn@latest add @coss/ui` (or the Bun/npm equivalent).
+After installing the package, add the local registry item:
+
+```bash
+bun add @tc96/datagrid
+bunx shadcn@latest add ./node_modules/@tc96/datagrid/registry/datagrid.json
+```
+
+The registry item targets `@components/patterns/datagrid`, which resolves
+through `aliases.components` and keeps `./components/ui` untouched.
 
 Tailwind must scan the installed package and your theme must expose the standard
 COSS semantic tokens:
 
 ```css
 @import "tailwindcss";
-@source "../node_modules/@gblsmlo/datagrid/dist";
+@source "../node_modules/@tc96/datagrid/dist";
 ```
 
 ## Quick start
@@ -80,7 +94,7 @@ import {
   DataGridViewOptions,
   useDataGrid,
   type DataGridColumnDef,
-} from "@gblsmlo/datagrid";
+} from "@tc96/datagrid";
 
 type RecordItem = {
   id: string;
@@ -120,7 +134,7 @@ export function RecordsView({ records }: { records: RecordItem[] }) {
 }
 ```
 
-Use `@gblsmlo/datagrid/core` when a non-visual layer only needs the public types
+Use `@tc96/datagrid/core` when a non-visual layer only needs the public types
 and constants.
 
 ## Ownership boundary
