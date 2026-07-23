@@ -45,21 +45,18 @@ const HEADER_ALIGN: Record<DataGridAlign, string> = {
 }
 
 const ROW_DENSITY: Record<DataGridDensity, string> = {
-  'extra-tall': 'min-h-18',
   medium: 'min-h-11',
   short: 'min-h-9',
   tall: 'min-h-14',
 }
 
 const CELL_DENSITY: Record<DataGridDensity, string> = {
-  'extra-tall': 'px-3 py-4',
   medium: 'px-2.5 py-2',
   short: 'px-2 py-1.5',
   tall: 'px-3 py-3',
 }
 
 const ROW_HEIGHT: Record<DataGridDensity, number> = {
-  'extra-tall': 72,
   medium: 44,
   short: 36,
   tall: 56,
@@ -270,15 +267,32 @@ function columnStyle(size: number, fill = false): CSSProperties {
 
 function pinnedColumnStyle<TData>(
   column: Column<TData, unknown>,
-  fillColumnId?: string,
+  showPinnedEdge = false,
+  suppressRightPin = false,
 ): CSSProperties {
-  const pinned = column.getIsPinned()
+  const configuredPin = column.getIsPinned()
+  const pinned = suppressRightPin && configuredPin === 'right' ? false : configuredPin
+  const meta = (column.columnDef.meta ?? {}) as DataGridColumnMeta
   return {
-    ...columnStyle(column.getSize(), !pinned && column.id === fillColumnId),
+    ...columnStyle(column.getSize(), !pinned && meta.fill === true),
     ...(pinned === 'left'
-      ? { left: column.getStart('left'), position: 'sticky', zIndex: 5 }
+      ? {
+          boxShadow: showPinnedEdge
+            ? '1px 0 0 var(--border), 8px 0 12px -12px color-mix(in oklab, var(--foreground) 40%, transparent)'
+            : undefined,
+          left: column.getStart('left'),
+          position: 'sticky',
+          zIndex: 5,
+        }
       : pinned === 'right'
-        ? { position: 'sticky', right: column.getAfter('right'), zIndex: 5 }
+        ? {
+            boxShadow: showPinnedEdge
+              ? '-1px 0 0 var(--border), -8px 0 12px -12px color-mix(in oklab, var(--foreground) 40%, transparent)'
+              : undefined,
+            position: 'sticky',
+            right: column.getAfter('right'),
+            zIndex: 5,
+          }
         : {}),
   }
 }
@@ -293,6 +307,10 @@ function parseCellKey(key: string): [rowId: string, columnId: string] {
 
 function isDragScrollExcludedTarget(target: EventTarget | null) {
   return target instanceof Element && Boolean(target.closest(DRAG_SCROLL_EXCLUDED_TARGETS))
+}
+
+function hasMaterialHorizontalOverflow(totalSize: number, viewportWidth: number) {
+  return totalSize - viewportWidth > DRAG_SCROLL_THRESHOLD_PX
 }
 
 export function DataGrid<TData>({
@@ -313,11 +331,6 @@ export function DataGrid<TData>({
   'aria-label': ariaLabel,
 }: DataGridProps<TData>) {
   const leafColumns = table.getVisibleLeafColumns()
-  const fillColumnId = [...leafColumns]
-    .reverse()
-    .find(
-      (column) => !column.getIsPinned() && column.id !== 'select' && column.id !== 'actions',
-    )?.id
   const rows = table.getRowModel().rows
   const collectionRows = table.getSortedRowModel().rows
   const collectionRowCount = table.getRowCount()
@@ -343,6 +356,8 @@ export function DataGrid<TData>({
   const [hasInteracted, setHasInteracted] = useState(false)
   const [selectedCells, setSelectedCells] = useState<Set<string>>(() => new Set())
   const [isDragScrolling, setIsDragScrolling] = useState(false)
+  const [canDragScroll, setCanDragScroll] = useState(false)
+  const [suppressRightPin, setSuppressRightPin] = useState(false)
   const cellRefs = useRef(new Map<string, HTMLDivElement>())
   const pendingSelectCellClickRef = useRef<{ cellKey: string; timestamp: number } | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
@@ -380,6 +395,28 @@ export function DataGrid<TData>({
     if (focusedCellIsAvailable) return
     setFocusedCell({ columnId: initialFocusedColumnId, rowId: initialFocusedRowId })
   }, [focusedCellIsAvailable, initialFocusedColumnId, initialFocusedRowId])
+
+  useEffect(() => {
+    const grid = gridRef.current
+    if (!grid) return
+
+    const updateCanDragScroll = () => {
+      setCanDragScroll(hasMaterialHorizontalOverflow(table.getTotalSize(), grid.clientWidth))
+      setSuppressRightPin(
+        table.getLeftVisibleLeafColumns().length > 0 &&
+          table.getRightVisibleLeafColumns().length > 0 &&
+          table.getLeftTotalSize() + table.getRightTotalSize() > grid.clientWidth,
+      )
+    }
+
+    updateCanDragScroll()
+    if (typeof ResizeObserver === 'undefined') return
+
+    const resizeObserver = new ResizeObserver(updateCanDragScroll)
+    resizeObserver.observe(grid)
+
+    return () => resizeObserver.disconnect()
+  }, [table, table.getState().columnPinning])
 
   useEffect(() => {
     const availableRowIds = new Set(collectionRows.map((row) => row.id))
@@ -587,7 +624,9 @@ export function DataGrid<TData>({
     }
 
     const grid = event.currentTarget
-    if (grid.scrollWidth <= grid.clientWidth) return
+    if (!canDragScroll || !hasMaterialHorizontalOverflow(table.getTotalSize(), grid.clientWidth)) {
+      return
+    }
 
     dragScrollGestureRef.current = {
       dragging: false,
@@ -691,13 +730,20 @@ export function DataGrid<TData>({
               aria-colindex={columnIndex + 1}
               aria-selected={isSelected}
               className={cn(
-                'flex min-w-0 items-center overflow-hidden border-e outline-none last:border-e-0 data-[pinned]:bg-background data-[selected=true]:bg-primary/10 data-[focused=true]:ring-1 data-[focused=true]:ring-inset data-[focused=true]:ring-ring',
+                'flex min-w-0 items-center overflow-hidden border-e outline-none last:border-e-0 group-hover:bg-accent/40 group-hover:data-[pinned]:bg-[color-mix(in_oklab,var(--accent)_40%,var(--background))] data-[pinned]:bg-background data-[row-selected=true]:bg-primary/10 data-[pinned]:data-[row-selected=true]:bg-[color-mix(in_oklab,var(--primary)_10%,var(--background))] data-[selected=true]:bg-primary/10',
+                cell.column.id !== 'select' &&
+                  'data-[focused=true]:ring-1 data-[focused=true]:ring-inset data-[focused=true]:ring-ring',
                 CELL_DENSITY[density],
               )}
               data-focused={isFocused && hasInteracted ? 'true' : undefined}
+              data-row-selected={selected ? 'true' : undefined}
               data-selected={isSelected ? 'true' : undefined}
               data-column-id={cell.column.id}
-              data-pinned={cell.column.getIsPinned() || undefined}
+              data-pinned={
+                suppressRightPin && cell.column.getIsPinned() === 'right'
+                  ? undefined
+                  : cell.column.getIsPinned() || undefined
+              }
               data-slot="data-grid-cell"
               key={cell.id}
               onClickCapture={(event) =>
@@ -723,7 +769,7 @@ export function DataGrid<TData>({
                 } else cellRefs.current.delete(currentCellKey)
               }}
               role="gridcell"
-              style={pinnedColumnStyle(cell.column, fillColumnId)}
+              style={pinnedColumnStyle(cell.column, canDragScroll, suppressRightPin)}
               tabIndex={isFocused ? 0 : -1}
             >
               {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -736,7 +782,10 @@ export function DataGrid<TData>({
 
   return (
     <ScrollAreaPrimitive.Root
-      className={cn('relative h-auto w-full rounded-md border bg-background text-sm', className)}
+      className={cn(
+        'relative h-auto w-fit max-w-full rounded-md border bg-background text-sm',
+        className,
+      )}
       data-slot="data-grid"
     >
       <ScrollAreaPrimitive.Viewport
@@ -744,7 +793,10 @@ export function DataGrid<TData>({
         aria-colcount={leafColumns.length}
         aria-label={ariaLabel}
         aria-rowcount={ariaRowCount}
-        className="grid h-full cursor-grab select-none rounded-[inherit] outline-none transition-shadows focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background data-[drag-scroll=dragging]:cursor-grabbing data-has-overflow-x:overscroll-x-contain data-has-overflow-y:overscroll-y-contain"
+        className={cn(
+          'grid h-full select-none rounded-[inherit] outline-none transition-shadows focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background data-[drag-scroll=dragging]:cursor-grabbing data-has-overflow-x:overscroll-x-contain data-has-overflow-y:overscroll-y-contain',
+          canDragScroll && 'cursor-grab',
+        )}
         data-density={density}
         data-drag-scroll={isDragScrolling ? 'dragging' : undefined}
         data-slot="scroll-area-viewport"
@@ -789,13 +841,24 @@ export function DataGrid<TData>({
                               ? 'none'
                               : undefined
                       }
-                      className="relative flex min-h-9 items-center border-e px-1.5 text-muted-foreground last:border-e-0 data-[pinned]:bg-background"
+                      className={cn(
+                        'relative flex min-h-9 items-center border-e px-1.5 text-muted-foreground last:border-e-0 data-[pinned]:bg-background',
+                        header.column.id === 'select' && 'justify-center px-0',
+                      )}
                       data-column-id={header.column.id}
-                      data-pinned={header.column.getIsPinned() || undefined}
+                      data-pinned={
+                        suppressRightPin && header.column.getIsPinned() === 'right'
+                          ? undefined
+                          : header.column.getIsPinned() || undefined
+                      }
                       data-slot="data-grid-header-cell"
                       key={header.id}
                       role="columnheader"
-                      style={pinnedColumnStyle(header.column, fillColumnId)}
+                      style={pinnedColumnStyle(
+                        header.column,
+                        canDragScroll,
+                        suppressRightPin,
+                      )}
                       tabIndex={-1}
                     >
                       {header.isPlaceholder ? null : <DataGridColumnHeader header={header} />}
@@ -834,10 +897,14 @@ export function DataGrid<TData>({
                         CELL_DENSITY[density],
                       )}
                       data-column-id={column.id}
-                      data-pinned={column.getIsPinned() || undefined}
+                      data-pinned={
+                        suppressRightPin && column.getIsPinned() === 'right'
+                          ? undefined
+                          : column.getIsPinned() || undefined
+                      }
                       key={column.id}
                       role="gridcell"
-                      style={pinnedColumnStyle(column, fillColumnId)}
+                      style={pinnedColumnStyle(column, canDragScroll, suppressRightPin)}
                       tabIndex={-1}
                     >
                       <Skeleton className="h-4 w-full" />

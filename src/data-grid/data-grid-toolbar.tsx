@@ -4,7 +4,6 @@ import type { Table as TanstackTable } from '@tanstack/react-table'
 import {
   AlignVerticalSpaceAroundIcon,
   ArrowDownUpIcon,
-  ChevronsDownUpIcon,
   Columns3Icon,
   EqualIcon,
   ListFilterIcon,
@@ -172,7 +171,6 @@ const DENSITIES: Array<{
   { icon: MinusIcon, label: 'Compacta', value: 'short' },
   { icon: EqualIcon, label: 'Média', value: 'medium' },
   { icon: AlignVerticalSpaceAroundIcon, label: 'Alta', value: 'tall' },
-  { icon: ChevronsDownUpIcon, label: 'Extra alta', value: 'extra-tall' },
 ]
 
 export interface DataGridDensityMenuProps<TData> {
@@ -209,8 +207,10 @@ export function DataGridDensityMenu<TData>({
           <MenuGroupLabel>Altura das linhas</MenuGroupLabel>
           {DENSITIES.map((option) => (
             <MenuRadioItem key={option.value} value={option.value}>
-              <option.icon />
-              {option.label}
+              <span className="flex min-w-0 flex-1 items-center gap-4">
+                <span className="flex-1 truncate">{option.label}</span>
+                <option.icon className="text-muted-foreground" />
+              </span>
             </MenuRadioItem>
           ))}
         </MenuRadioGroup>
