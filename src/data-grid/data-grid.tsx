@@ -405,6 +405,7 @@ export function DataGrid<TData>({
       setSuppressRightPin(
         table.getLeftVisibleLeafColumns().length > 0 &&
           table.getRightVisibleLeafColumns().length > 0 &&
+          grid.clientWidth > 0 &&
           table.getLeftTotalSize() + table.getRightTotalSize() > grid.clientWidth,
       )
     }
