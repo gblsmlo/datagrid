@@ -4,7 +4,7 @@ import type { DataGridColumnDef, DataGridColumnType } from './index'
 
 await import('../test/dom')
 
-const { cleanup, fireEvent, render, screen, waitFor } = await import('@testing-library/react')
+const { act, cleanup, fireEvent, render, screen, waitFor } = await import('@testing-library/react')
 Object.assign(window, { PointerEvent: window.MouseEvent })
 Object.assign(window, {
   cancelAnimationFrame: () => undefined,
@@ -36,7 +36,10 @@ const {
   useDataGrid,
 } = await import('./index')
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.useRealTimers()
+})
 
 interface RowItem {
   id: string
@@ -207,6 +210,52 @@ function FoundationGrid() {
         table={table}
       />
     </div>
+  )
+}
+
+function SearchGrid({
+  commitOnBlur,
+  commitOnEnter,
+  debounceMs = 500,
+}: {
+  commitOnBlur?: boolean
+  commitOnEnter?: boolean
+  debounceMs?: number
+}) {
+  const columns: DataGridColumnDef<RowItem>[] = [
+    {
+      accessorKey: 'name',
+      header: 'Nome',
+      meta: { label: 'Nome', type: 'title', variant: 'text' },
+    },
+    {
+      accessorKey: 'note',
+      header: 'Nota',
+      meta: { label: 'Nota', type: 'text', variant: 'text' },
+    },
+  ]
+  const { table } = useDataGrid<RowItem>({
+    columns,
+    data: [
+      { id: 'row-a', name: 'Alpha', note: 'one' },
+      { id: 'row-b', name: 'Zulu', note: 'two' },
+    ],
+    getRowId: (row) => row.id,
+  })
+
+  return (
+    <>
+      <DataGridToolbar aria-label="Ações de busca">
+        <DataGridSearch
+          commitOnBlur={commitOnBlur}
+          commitOnEnter={commitOnEnter}
+          debounceMs={debounceMs}
+          placeholder="Buscar registros"
+          table={table}
+        />
+      </DataGridToolbar>
+      <DataGrid aria-label="Registros buscáveis" table={table} />
+    </>
   )
 }
 
@@ -626,6 +675,9 @@ describe('DataGrid', () => {
     fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar registros…' }), {
       target: { value: 'Alpha' },
     })
+    fireEvent.keyDown(screen.getByRole('searchbox', { name: 'Buscar registros…' }), {
+      key: 'Enter',
+    })
 
     expect(screen.getByRole('gridcell', { name: 'Alpha' })).toBeTruthy()
     expect(screen.queryByText('Zulu')).toBeNull()
@@ -689,6 +741,51 @@ describe('DataGrid', () => {
     expect(screen.getByText('Zulu')).toBeTruthy()
     expect(screen.queryByText('Alpha')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Filtrar' }))
+  })
+
+  test('bounds search updates while keeping the input responsive', async () => {
+    vi.useFakeTimers()
+    render(<SearchGrid />)
+
+    const searchInput = screen.getByRole('searchbox', { name: 'Buscar registros' })
+    fireEvent.change(searchInput, { target: { value: 'Zulu' } })
+
+    expect((searchInput as HTMLInputElement).value).toBe('Zulu')
+    expect(screen.getByText('Alpha')).toBeTruthy()
+    expect(screen.getByText('Zulu')).toBeTruthy()
+
+    act(() => vi.advanceTimersByTime(499))
+    expect(screen.getByText('Alpha')).toBeTruthy()
+
+    act(() => vi.advanceTimersByTime(1))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Alpha')).toBeNull()
+      expect(screen.getByText('Zulu')).toBeTruthy()
+    })
+  })
+
+  test('commits pending search on Enter and blur', async () => {
+    vi.useFakeTimers()
+    render(<SearchGrid debounceMs={1000} />)
+
+    const searchInput = screen.getByRole('searchbox', { name: 'Buscar registros' })
+    fireEvent.change(searchInput, { target: { value: 'Alpha' } })
+    fireEvent.keyDown(searchInput, { key: 'Enter' })
+
+    await waitFor(() => {
+      expect(screen.getByText('Alpha')).toBeTruthy()
+      expect(screen.queryByText('Zulu')).toBeNull()
+    })
+
+    fireEvent.change(searchInput, { target: { value: 'Zulu' } })
+    expect(screen.getByText('Alpha')).toBeTruthy()
+    fireEvent.blur(searchInput)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Alpha')).toBeNull()
+      expect(screen.getByText('Zulu')).toBeTruthy()
+    })
   })
 
   test('uses the whole column header trigger to toggle its menu without sorting implicitly', () => {

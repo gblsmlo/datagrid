@@ -10,6 +10,7 @@ import {
   MinusIcon,
 } from 'lucide-react'
 import type React from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '../components/button'
 import { Input } from '../components/input'
 import {
@@ -239,7 +240,15 @@ export function DataGridToolbarSeparator(
 }
 
 export interface DataGridSearchProps<TData>
-  extends Omit<React.ComponentProps<typeof Input>, 'onChange' | 'value' | 'type'> {
+  extends Omit<
+    React.ComponentProps<typeof Input>,
+    'onBlur' | 'onChange' | 'onKeyDown' | 'type' | 'value'
+  > {
+  commitOnBlur?: boolean
+  commitOnEnter?: boolean
+  debounceMs?: number
+  onBlur?: React.FocusEventHandler<HTMLInputElement>
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>
   table: TanstackTable<TData>
 }
 
@@ -247,24 +256,79 @@ export interface DataGridSearchProps<TData>
 export function DataGridSearch<TData>({
   'aria-label': ariaLabel,
   className,
+  commitOnBlur = true,
+  commitOnEnter = true,
+  debounceMs = 250,
+  onBlur,
+  onKeyDown,
   placeholder = 'Buscar…',
   table,
   ...props
 }: DataGridSearchProps<TData>): React.ReactElement {
   const accessibleName = ariaLabel ?? placeholder
+  const globalFilter = (table.getState().globalFilter as string) ?? ''
+  const [inputValue, setInputValue] = useState(globalFilter)
+  const pendingValueRef = useRef(globalFilter)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearPendingCommit = useCallback(() => {
+    if (timerRef.current === null) return
+    clearTimeout(timerRef.current)
+    timerRef.current = null
+  }, [])
+
+  const commitSearchValue = useCallback(
+    (value: string) => {
+      clearPendingCommit()
+      pendingValueRef.current = value
+      if (value === ((table.getState().globalFilter as string) ?? '')) return
+      table.setGlobalFilter(value)
+      table.setPageIndex(0)
+    },
+    [clearPendingCommit, table],
+  )
+
+  const queueSearchValue = useCallback(
+    (value: string) => {
+      pendingValueRef.current = value
+      clearPendingCommit()
+      if (debounceMs <= 0) {
+        commitSearchValue(value)
+        return
+      }
+      timerRef.current = setTimeout(() => commitSearchValue(value), debounceMs)
+    },
+    [clearPendingCommit, commitSearchValue, debounceMs],
+  )
+
+  useEffect(() => {
+    setInputValue(globalFilter)
+    pendingValueRef.current = globalFilter
+  }, [globalFilter])
+
+  useEffect(() => clearPendingCommit, [clearPendingCommit])
 
   return (
     <Input
       aria-label={accessibleName}
       className={cn('max-w-64', className)}
       data-slot="data-grid-search"
+      onBlur={(event) => {
+        if (commitOnBlur) commitSearchValue(pendingValueRef.current)
+        onBlur?.(event)
+      }}
       onChange={(event) => {
-        table.setGlobalFilter(event.target.value)
-        table.setPageIndex(0)
+        const nextValue = event.target.value
+        setInputValue(nextValue)
+        queueSearchValue(nextValue)
+      }}
+      onKeyDown={(event) => {
+        if (commitOnEnter && event.key === 'Enter') commitSearchValue(pendingValueRef.current)
+        onKeyDown?.(event)
       }}
       placeholder={placeholder}
       type="search"
-      value={(table.getState().globalFilter as string) ?? ''}
+      value={inputValue}
       {...props}
     />
   )
