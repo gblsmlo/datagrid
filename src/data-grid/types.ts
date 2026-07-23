@@ -45,7 +45,7 @@ export type DataGridColumnType = (typeof DATA_GRID_COLUMN_TYPES)[number]
 export type DataGridAlign = 'start' | 'center' | 'end'
 
 /** Vertical density of grid rows, aligned with the Tablecn reference. */
-export type DataGridDensity = 'short' | 'medium' | 'tall' | 'extra-tall'
+export type DataGridDensity = 'short' | 'medium' | 'tall'
 
 export interface DataGridSelectOption {
   label: string
@@ -64,6 +64,8 @@ export interface DataGridCellValueChange {
  * Attach it to a column via `meta` in the column definition.
  */
 export interface DataGridColumnMeta {
+  /** Allows this unpinned column to grow into the grid's remaining horizontal space. */
+  fill?: boolean
   /** Display variant. Defaults to `text`. */
   variant?: DataGridCellVariant
   /** Semantic data type represented by the column header icon. */

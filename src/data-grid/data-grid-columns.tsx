@@ -20,7 +20,7 @@ export function createSelectColumn<TData>(
     enablePinning: false,
     enableResizing: false,
     header: ({ table }) => (
-      <div className="flex items-center justify-center">
+      <div className="absolute inset-0 flex items-center justify-center">
         <Checkbox
           aria-label="Selecionar todos os registros"
           checked={table.getIsAllPageRowsSelected()}

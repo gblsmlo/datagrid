@@ -30,7 +30,6 @@ const {
   DataGridPagination,
   DataGridSearch,
   DataGridSelectionSummary,
-  DataGridSortMenu,
   DataGridToolbar,
   DataGridViewOptions,
   createSelectColumn,
@@ -199,7 +198,6 @@ function FoundationGrid() {
           Arquivar
         </Button>
         <DataGridFilterMenu table={table} />
-        <DataGridSortMenu table={table} />
         <DataGridDensityMenu table={table} />
         <DataGridViewOptions table={table} />
       </DataGridToolbar>
@@ -275,7 +273,7 @@ function RightPinnedGrid({
     {
       accessorKey: 'name',
       header: 'Nome',
-      meta: { label: 'Nome', type: 'title', variant: 'text' },
+      meta: { fill: true, label: 'Nome', type: 'title', variant: 'text' },
       size: 120,
     },
     {
@@ -369,7 +367,7 @@ function SingleSelectGrid() {
   return <DataGrid aria-label="Registros com seleção única" table={table} />
 }
 
-function WideGrid() {
+function WideGrid({ fillTarget = false }: { fillTarget?: boolean }) {
   const columns: DataGridColumnDef<WideRowItem>[] = [
     {
       accessorKey: 'name',
@@ -404,7 +402,7 @@ function WideGrid() {
     {
       accessorKey: 'target',
       header: 'Prazo',
-      meta: { label: 'Prazo', type: 'date', variant: 'text' },
+      meta: { fill: fillTarget, label: 'Prazo', type: 'date', variant: 'text' },
       size: 200,
     },
   ]
@@ -491,6 +489,20 @@ function defineHorizontalOverflow(element: HTMLElement) {
   })
 }
 
+function defineNoHorizontalOverflow(element: HTMLElement) {
+  Object.defineProperties(element, {
+    clientWidth: { configurable: true, value: 1400 },
+    scrollWidth: { configurable: true, value: 1400 },
+  })
+}
+
+function defineIncidentalHorizontalOverflow(element: HTMLElement) {
+  Object.defineProperties(element, {
+    clientWidth: { configurable: true, value: 1396 },
+    scrollWidth: { configurable: true, value: 1404 },
+  })
+}
+
 function definePointerCapture(element: HTMLElement) {
   let capturedPointerId: number | null = null
   const setPointerCapture = vi.fn((pointerId: number) => {
@@ -511,6 +523,23 @@ function definePointerCapture(element: HTMLElement) {
 }
 
 describe('DataGrid', () => {
+  test('keeps columns hug-sized by default and only fills remaining space when opted in', () => {
+    const { container, rerender } = render(<WideGrid />)
+    const gridRoot = container.querySelector<HTMLElement>('[data-slot="data-grid"]')
+    const targetHeader = container.querySelector<HTMLElement>(
+      '[data-slot="data-grid-header-cell"][data-column-id="target"]',
+    )
+
+    expect(gridRoot?.classList.contains('w-fit')).toBe(true)
+    expect(gridRoot?.classList.contains('max-w-full')).toBe(true)
+    expect(gridRoot?.classList.contains('w-full')).toBe(false)
+    expect(targetHeader?.style.flex).toBe('0 0 200px')
+
+    rerender(<WideGrid fillTarget />)
+
+    expect(targetHeader?.style.flex).toBe('1 0 200px')
+  })
+
   test('exports an exhaustive icon registry for every column type', () => {
     expect(DATA_GRID_COLUMN_TYPES).toEqual(expectedColumnTypes)
     expect(Object.keys(DATA_GRID_COLUMN_TYPE_ICONS)).toEqual([...expectedColumnTypes])
@@ -554,12 +583,29 @@ describe('DataGrid', () => {
     expect(container.querySelector('[data-slot="card-frame"]')).toBeNull()
     expect(container.querySelector('[data-slot="card-frame-footer"]')).toBeNull()
     expect(screen.getByText('0 selecionados')).toBeTruthy()
+    expect(
+      screen
+        .getByRole('checkbox', { name: 'Selecionar todos os registros' })
+        .parentElement?.classList.contains('inset-0'),
+    ).toBe(true)
+    expect(
+      container
+        .querySelector('[data-slot="data-grid-header-cell"][data-column-id="select"]')
+        ?.classList.contains('justify-center'),
+    ).toBe(true)
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Selecionar registro' }))
 
+    expect(
+      screen
+        .getByRole('checkbox', { name: 'Selecionar registro' })
+        .closest('[data-slot="data-grid-cell"]')
+        ?.getAttribute('data-row-selected'),
+    ).toBe('true')
     expect(screen.getByText('1 selecionado')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Arquivar' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Colunas' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Ordenar' })).toBeNull()
   })
 
   test('keeps search and pagination as opt-in composition', () => {
@@ -629,7 +675,7 @@ describe('DataGrid', () => {
     const toolbar = screen.getByRole('toolbar', { name: 'Ações dos registros' })
     expect(toolbar.getAttribute('data-variant')).toBe('plain')
     expect(screen.getByRole('button', { name: 'Filtrar' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Ordenar' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Ordenar' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Compacta' })).toBeTruthy()
     expect(
       screen.getByRole('grid', { name: 'Registros compostos' }).getAttribute('data-density'),
@@ -731,11 +777,19 @@ describe('DataGrid', () => {
   test('keeps pinning and row creation extensible through the consumer', () => {
     const { container } = render(<MutablePinnedGrid />)
 
+    const pinnedHeader = container.querySelector<HTMLElement>(
+      '[data-slot="data-grid-header-cell"][data-column-id="name"]',
+    )
+    const pinnedCell = container.querySelector<HTMLElement>(
+      '[data-slot="data-grid-cell"][data-column-id="name"]',
+    )
+
+    expect(pinnedHeader?.getAttribute('data-pinned')).toBe('left')
     expect(
-      container
-        .querySelector('[data-slot="data-grid-header-cell"][data-column-id="name"]')
-        ?.getAttribute('data-pinned'),
-    ).toBe('left')
+      pinnedCell?.classList.contains(
+        'group-hover:data-[pinned]:bg-[color-mix(in_oklab,var(--accent)_40%,var(--background))]',
+      ),
+    ).toBe(true)
 
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar linha' }))
 
@@ -745,7 +799,7 @@ describe('DataGrid', () => {
     ).toBe('4')
   })
 
-  test('fills the last unpinned column before a right-pinned column', () => {
+  test('fills an opted-in unpinned column before a right-pinned column', () => {
     const { container } = render(<RightPinnedGrid />)
     const nameHeader = container.querySelector<HTMLElement>(
       '[data-slot="data-grid-header-cell"][data-column-id="name"]',
@@ -762,6 +816,7 @@ describe('DataGrid', () => {
     expect(noteHeader?.style.flexGrow).toBe('0')
     expect(noteHeader?.style.position).toBe('sticky')
     expect(noteHeader?.style.right).toBe('0px')
+    expect(noteHeader?.style.boxShadow).toContain('-1px 0 0 var(--border)')
   })
 
   test('preserves left and right pinned offsets in loading rows', () => {
@@ -773,8 +828,10 @@ describe('DataGrid', () => {
     expect(loadingCells).toHaveLength(2)
     expect(loadingCells[0]!.style.position).toBe('sticky')
     expect(loadingCells[0]!.style.left).toBe('0px')
+    expect(loadingCells[0]!.style.boxShadow).toContain('1px 0 0 var(--border)')
     expect(loadingCells[1]!.style.position).toBe('sticky')
     expect(loadingCells[1]!.style.right).toBe('0px')
+    expect(loadingCells[1]!.style.boxShadow).toContain('-1px 0 0 var(--border)')
   })
 
   test('virtualizes long ungrouped collections without changing the grid contract', () => {
@@ -904,6 +961,68 @@ describe('DataGrid', () => {
 
     fireEvent.click(cell, { clientX: 160, clientY: 43 })
     expect(cell.getAttribute('data-selected')).toBeNull()
+  })
+
+  test('does not drag scroll when the columns fit inside the grid viewport', () => {
+    render(<WideGrid />)
+
+    const grid = screen.getByRole('grid', { name: 'Registros largos' })
+    defineNoHorizontalOverflow(grid)
+    const pointerCapture = definePointerCapture(grid)
+    const cell = screen.getByRole('gridcell', { name: 'Alpha' })
+    grid.scrollLeft = 0
+
+    fireEvent.pointerDown(cell, {
+      button: 0,
+      clientX: 220,
+      clientY: 40,
+      pointerId: 15,
+      pointerType: 'mouse',
+    })
+    fireEvent.pointerMove(grid, {
+      button: 0,
+      buttons: 1,
+      clientX: 140,
+      clientY: 42,
+      pointerId: 15,
+      pointerType: 'mouse',
+    })
+    fireEvent.pointerUp(grid, { pointerId: 15, pointerType: 'mouse' })
+
+    expect(grid.scrollLeft).toBe(0)
+    expect(grid.getAttribute('data-drag-scroll')).toBeNull()
+    expect(pointerCapture.setPointerCapture).not.toHaveBeenCalled()
+  })
+
+  test('does not drag scroll for incidental horizontal overflow within the gesture threshold', () => {
+    render(<WideGrid />)
+
+    const grid = screen.getByRole('grid', { name: 'Registros largos' })
+    defineIncidentalHorizontalOverflow(grid)
+    const pointerCapture = definePointerCapture(grid)
+    const cell = screen.getByRole('gridcell', { name: 'Alpha' })
+    grid.scrollLeft = 0
+
+    fireEvent.pointerDown(cell, {
+      button: 0,
+      clientX: 220,
+      clientY: 40,
+      pointerId: 16,
+      pointerType: 'mouse',
+    })
+    fireEvent.pointerMove(grid, {
+      button: 0,
+      buttons: 1,
+      clientX: 140,
+      clientY: 42,
+      pointerId: 16,
+      pointerType: 'mouse',
+    })
+    fireEvent.pointerUp(grid, { pointerId: 16, pointerType: 'mouse' })
+
+    expect(grid.scrollLeft).toBe(0)
+    expect(grid.getAttribute('data-drag-scroll')).toBeNull()
+    expect(pointerCapture.setPointerCapture).not.toHaveBeenCalled()
   })
 
   test('preserves normal cell click behavior below the drag threshold', () => {
