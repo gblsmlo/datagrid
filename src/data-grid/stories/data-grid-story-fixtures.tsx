@@ -1,24 +1,20 @@
-import type { Meta, StoryObj } from '@storybook/react-vite'
 import type { ColumnDef } from '@tanstack/react-table'
 import { useState } from 'react'
-import { Button } from '../components/button'
-
-import { DataGrid } from './data-grid'
-import { createSelectColumn } from './data-grid-columns'
-import { DataGridPagination } from './data-grid-pagination'
+import { Button } from '../../components/button'
+import { DataGrid } from '../data-grid'
+import { createSelectColumn } from '../data-grid-columns'
+import { DataGridPagination } from '../data-grid-pagination'
 import {
   DataGridDensityMenu,
   DataGridFilterMenu,
   DataGridSearch,
   DataGridSelectionSummary,
-  DataGridSortMenu,
   DataGridToolbar,
   DataGridToolbarGroup,
   DataGridViewOptions,
-} from './data-grid-toolbar'
-import dataGridDocs from './README.md?raw'
-import { DATA_GRID_COLUMN_TYPES, type DataGridColumnType, type DataGridDensity } from './types'
-import { useDataGrid } from './use-data-grid'
+} from '../data-grid-toolbar'
+import { DATA_GRID_COLUMN_TYPES, type DataGridColumnType, type DataGridDensity } from '../types'
+import { useDataGrid } from '../use-data-grid'
 
 interface ExampleRecord {
   category: string
@@ -101,24 +97,24 @@ const wideColumns: ColumnDef<ExampleRecord, unknown>[] = [
     size: 220,
   },
   {
-    accessorFn: (row) => (row.status === 'Active' ? 'Alta' : 'Media'),
+    accessorFn: (row) => (row.status === 'Active' ? 'Alta' : 'Média'),
     header: 'Prioridade',
     id: 'priority',
     meta: { label: 'Prioridade', type: 'select', variant: 'badge' },
     size: 220,
   },
   {
-    accessorFn: (row) => `Responsavel ${row.id.split('-').at(-1)}`,
-    header: 'Responsavel',
+    accessorFn: (row) => `Responsável ${row.id.split('-').at(-1)}`,
+    header: 'Responsável',
     id: 'owner',
-    meta: { label: 'Responsavel', type: 'person', variant: 'text' },
+    meta: { label: 'Responsável', type: 'person', variant: 'text' },
     size: 240,
   },
   {
     accessorFn: (row) => `REF-${row.id.split('-').at(-1)?.padStart(3, '0')}`,
-    header: 'Referencia',
+    header: 'Referência',
     id: 'reference',
-    meta: { label: 'Referencia', type: 'id', variant: 'text' },
+    meta: { label: 'Referência', type: 'id', variant: 'text' },
     size: 200,
   },
   {
@@ -129,7 +125,7 @@ const wideColumns: ColumnDef<ExampleRecord, unknown>[] = [
   },
 ]
 
-const records: ExampleRecord[] = [
+export const records: ExampleRecord[] = [
   {
     category: 'Primária',
     id: 'record-1',
@@ -160,7 +156,7 @@ const records: ExampleRecord[] = [
   },
 ]
 
-const overflowRecords: ExampleRecord[] = Array.from({ length: 80 }, (_, index) => {
+export const overflowRecords: ExampleRecord[] = Array.from({ length: 80 }, (_, index) => {
   const source = records[index % records.length]!
   return {
     ...source,
@@ -212,7 +208,7 @@ const columnTypeRecord = {
   ...Object.fromEntries(DATA_GRID_COLUMN_TYPES.map((type) => [type, COLUMN_TYPE_LABELS[type]])),
 } as ColumnTypeRecord
 
-function DataGridExample({
+export function DataGridExample({
   actionLabel,
   allowRowAdd = false,
   data,
@@ -244,11 +240,9 @@ function DataGridExample({
     pageSize: 3,
     tableOptions: {
       initialState: {
-        columnPinning: actionLabel
-          ? { left: ['select'] }
-          : pinOuterColumns
-            ? { left: ['name'], right: ['updatedAt'] }
-            : undefined,
+        columnPinning: pinOuterColumns
+          ? { left: ['name'], right: ['updatedAt'] }
+          : undefined,
         rowSelection: initialSelectedId ? { [initialSelectedId]: true } : undefined,
       },
     },
@@ -257,54 +251,55 @@ function DataGridExample({
 
   return (
     <div className="flex w-full max-w-6xl flex-col gap-3">
-      <DataGridToolbar className="justify-between">
-        <DataGridToolbarGroup>
-          <DataGridSearch placeholder="Buscar registros…" table={table} />
-          {actionLabel && selectedCount > 0 ? (
-            <>
-              <DataGridSelectionSummary table={table} />
-              <Button size="sm" variant="outline">
-                {actionLabel}
-              </Button>
-            </>
-          ) : null}
-        </DataGridToolbarGroup>
-        <DataGridToolbarGroup>
-          <DataGridFilterMenu table={table} />
-          <DataGridSortMenu table={table} />
-          <DataGridDensityMenu table={table} />
-          <DataGridViewOptions table={table} />
-        </DataGridToolbarGroup>
-      </DataGridToolbar>
-      <DataGrid
-        aria-label="Registros de exemplo"
-        emptyMessage={emptyMessage}
-        footer={showPagination ? <DataGridPagination table={table} /> : undefined}
-        isLoading={isLoading}
-        maxHeight={maxHeight}
-        onRowAdd={
-          allowRowAdd
-            ? () =>
-                setRows((current) => [
-                  ...current,
-                  {
-                    category: 'Primária',
-                    id: `record-new-${current.length + 1}`,
-                    name: `Novo registro ${current.length + 1}`,
-                    status: 'Draft',
-                    updatedAt: '2026-07-17',
-                  },
-                ])
-            : undefined
-        }
-        table={table}
-        virtualize={virtualize}
-      />
+      <div className="w-fit max-w-full" style={{ width: table.getTotalSize() }}>
+        <DataGridToolbar className="w-full justify-between">
+          <DataGridToolbarGroup>
+            <DataGridSearch placeholder="Buscar registros…" table={table} />
+          </DataGridToolbarGroup>
+          <DataGridToolbarGroup>
+            {actionLabel && selectedCount > 0 ? (
+              <>
+                <DataGridSelectionSummary table={table} />
+                <Button size="sm" variant="outline">
+                  {actionLabel}
+                </Button>
+              </>
+            ) : null}
+            <DataGridFilterMenu table={table} />
+            <DataGridDensityMenu table={table} />
+            <DataGridViewOptions table={table} />
+          </DataGridToolbarGroup>
+        </DataGridToolbar>
+        <DataGrid
+          aria-label="Registros de exemplo"
+          emptyMessage={emptyMessage}
+          footer={showPagination ? <DataGridPagination table={table} /> : undefined}
+          isLoading={isLoading}
+          maxHeight={maxHeight}
+          onRowAdd={
+            allowRowAdd
+              ? () =>
+                  setRows((current) => [
+                    ...current,
+                    {
+                      category: 'Primária',
+                      id: `record-new-${current.length + 1}`,
+                      name: `Novo registro ${current.length + 1}`,
+                      status: 'Draft',
+                      updatedAt: '2026-07-17',
+                    },
+                  ])
+              : undefined
+          }
+          table={table}
+          virtualize={virtualize}
+        />
+      </div>
     </div>
   )
 }
 
-function ColumnTypesExample() {
+export function ColumnTypesExample() {
   const { table } = useDataGrid<ColumnTypeRecord>({
     columns: columnTypeColumns,
     data: [columnTypeRecord],
@@ -321,7 +316,7 @@ function ColumnTypesExample() {
   )
 }
 
-function WideDragScrollExample() {
+export function WideDragScrollExample() {
   const { table } = useDataGrid<ExampleRecord>({
     columns: wideColumns,
     data: overflowRecords.slice(0, 12),
@@ -339,124 +334,4 @@ function WideDragScrollExample() {
       <DataGrid aria-label="Registros largos" maxHeight={420} table={table} />
     </div>
   )
-}
-
-const meta = {
-  component: DataGrid,
-  parameters: {
-    docs: {
-      description: {
-        component: dataGridDocs,
-      },
-    },
-    layout: 'padded',
-  },
-  tags: ['autodocs'],
-  title: 'Patterns/DataGrid',
-} satisfies Meta<typeof DataGrid>
-
-export default meta
-type Story = StoryObj<typeof DataGrid>
-
-export const FunctionalityOverview: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Composes DataGrid controls, stable selection, pinning, pagination and contextual actions without introducing feature semantics.',
-      },
-    },
-  },
-  render: () => (
-    <DataGridExample
-      actionLabel="Aplicar ação"
-      allowRowAdd
-      data={records}
-      initialSelectedId="record-1"
-    />
-  ),
-}
-
-export const ColumnTypes: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Shows every semantic column type and its corresponding header icon independently from cell rendering.',
-      },
-    },
-  },
-  render: () => <ColumnTypesExample />,
-}
-
-export const SingleSelectCells: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Demonstra a primitiva opt-in de célula single-select. Escolher um Estado atualiza somente a fixture neutra local.',
-      },
-    },
-  },
-  render: () => <DataGridExample data={records} />,
-}
-
-export const WithoutAddRow: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Demonstra a composição da DataGrid sem fornecer onRowAdd; o trigger final para adicionar uma nova linha não é renderizado.',
-      },
-    },
-  },
-  render: () => <DataGridExample allowRowAdd={false} data={records} />,
-}
-
-export const VirtualizedOverflow: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story: 'Demonstra header sticky, overflow vertical, virtualização e composição de add-row.',
-      },
-    },
-  },
-  render: () => (
-    <DataGridExample
-      actionLabel="Aplicar ação"
-      allowRowAdd
-      data={overflowRecords}
-      maxHeight={420}
-      showPagination={false}
-      virtualize
-    />
-  ),
-}
-
-export const WideDragScroll: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Demonstra overflow horizontal amplo, colunas fixadas e arraste lateral em superficies nao interativas.',
-      },
-    },
-  },
-  render: () => <WideDragScrollExample />,
-}
-
-export const MediumDensity: Story = {
-  render: () => <DataGridExample data={records} density="medium" />,
-}
-
-export const Loading: Story = {
-  render: () => <DataGridExample data={[]} isLoading />,
-}
-
-export const PinnedLoading: Story = {
-  render: () => <DataGridExample data={[]} isLoading pinOuterColumns showPagination={false} />,
-}
-
-export const Empty: Story = {
-  render: () => <DataGridExample data={[]} emptyMessage="Nenhum registro para exibir." />,
 }
