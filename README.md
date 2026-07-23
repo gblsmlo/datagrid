@@ -7,6 +7,8 @@ The package provides the interaction and presentation layer for SaaS collection
 views. Your application remains responsible for business columns, permissions,
 remote state, mutations, navigation, and persistence.
 
+![DataGrid overview](docs/assets/datagrid-overview.png)
+
 ## Highlights
 
 - WAI-ARIA grid semantics and roving keyboard focus
