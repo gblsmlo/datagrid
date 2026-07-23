@@ -1,6 +1,6 @@
 {
   "name": "@tc96/datagrid",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Domain-neutral DataGrid view for React applications using COSS and Base UI.",
   "type": "module",
   "license": "MIT",
@@ -48,13 +48,13 @@
   },
   "scripts": {
     "build": "bun run clean && bun build ./src/index.ts ./src/core.ts --outdir ./dist --target browser --format esm --packages external && tsc -p tsconfig.build.json",
+    "dev": "storybook dev -p 6006 --no-open",
     "clean": "rm -rf dist storybook-static",
     "lint": "biome check --write .",
     "lint:ci": "biome ci .",
     "prepare": "bun run build",
     "prepublishOnly": "bun run build",
     "pack:check": "npm pack --dry-run",
-    "storybook": "storybook dev -p 6006 --no-open",
     "storybook:build": "storybook build",
     "test": "bun test",
     "toolchain:check": "sh scripts/check-toolchain.sh",
