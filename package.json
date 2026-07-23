@@ -1,6 +1,6 @@
 {
   "name": "@tc96/datagrid",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Domain-neutral DataGrid view for React applications using COSS and Base UI.",
   "type": "module",
   "license": "MIT",
