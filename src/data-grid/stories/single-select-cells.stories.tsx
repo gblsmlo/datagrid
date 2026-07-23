@@ -2,11 +2,12 @@ import { DataGridExample, records } from './data-grid-story-fixtures'
 import { dataGridMeta, type DataGridStory, storyParameters } from './data-grid-story-meta'
 import systemPrompt from './prompts/single-select-cells.system-prompt.md?raw'
 
-export default dataGridMeta
+const meta = { ...dataGridMeta, title: 'Single Select Cells' }
+export default meta
 
-export const SingleSelectCells: DataGridStory = {
+export const Default: DataGridStory = {
   parameters: storyParameters(
-    'Demonstra a primitiva opt-in de célula single-select com mutação controlada pelo consumer.',
+    'Documents the opt-in single-select cell primitive. The grid supplies the editing surface while the consumer owns allowed values, mutation, validation, and persistence.',
     systemPrompt,
   ),
   render: () => <DataGridExample data={records} />,

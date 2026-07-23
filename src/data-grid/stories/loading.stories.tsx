@@ -2,9 +2,13 @@ import { DataGridExample } from './data-grid-story-fixtures'
 import { dataGridMeta, type DataGridStory, storyParameters } from './data-grid-story-meta'
 import systemPrompt from './prompts/loading.system-prompt.md?raw'
 
-export default dataGridMeta
+const meta = { ...dataGridMeta, title: 'Loading' }
+export default meta
 
-export const Loading: DataGridStory = {
-  parameters: storyParameters('Demonstra o estado de carregamento padrão da DataGrid.', systemPrompt),
+export const Default: DataGridStory = {
+  parameters: storyParameters(
+    'Documents the default loading state. Keep the same grid structure while data is being fetched so the collection surface remains stable.',
+    systemPrompt,
+  ),
   render: () => <DataGridExample data={[]} isLoading />,
 }
