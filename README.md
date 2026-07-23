@@ -73,8 +73,28 @@ bun add @tc96/datagrid
 bunx shadcn@latest add ./node_modules/@tc96/datagrid/registry/datagrid.json
 ```
 
-The registry item targets `@components/patterns/datagrid`, which resolves
-through `aliases.components` and keeps `./components/ui` untouched.
+The registry item targets `@patterns/datagrid`, which resolves through
+`aliases.patterns` and keeps `./components/ui` untouched. This is intentional:
+consumer-owned primitives remain under `aliases.ui`, while TC96 pattern source
+is installed under `aliases.patterns`.
+
+### Alias compatibility
+
+The registry install is safe for projects whose UI primitives live in
+`components/ui`. DataGrid source is installed under the `patterns` alias and its
+implementation-private COSS/Base UI primitives are copied inside that pattern
+folder. It does not overwrite or import from the consumer's `ui` alias.
+
+Required alias contract:
+
+| Alias | Purpose |
+| --- | --- |
+| `ui` | Consumer-owned primitives, commonly `@/components/ui` |
+| `patterns` | TC96 source patterns, commonly `@/components/patterns` |
+
+Do not map `patterns` to `components/ui`. The pattern source and app primitives
+must stay separate so consumers can keep their existing COSS/shadcn primitive
+catalog without file conflicts.
 
 Tailwind must scan the installed package and your theme must expose the standard
 COSS semantic tokens:
