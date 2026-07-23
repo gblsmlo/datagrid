@@ -11,10 +11,11 @@ function StoryTheme({ children, theme }: Readonly<{ children?: ReactNode; theme:
     document.documentElement.style.colorScheme = theme
   }, [theme])
 
-  return createElement('div', { className: 'min-h-screen bg-background text-foreground' }, children)
+  return createElement('div', { className: 'bg-background text-foreground' }, children)
 }
 
 const preview: Preview = {
+  tags: ['autodocs'],
   decorators: [
     (Story, context) =>
       createElement(
@@ -38,6 +39,7 @@ const preview: Preview = {
     theme: 'dark',
   },
   parameters: {
+    layout: 'centered',
     a11y: { test: 'todo' },
     controls: {
       matchers: {

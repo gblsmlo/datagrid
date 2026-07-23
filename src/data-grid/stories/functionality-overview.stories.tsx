@@ -2,11 +2,12 @@ import { DataGridExample, records } from './data-grid-story-fixtures'
 import { dataGridMeta, type DataGridStory, storyParameters } from './data-grid-story-meta'
 import systemPrompt from './prompts/functionality-overview.system-prompt.md?raw'
 
-export default dataGridMeta
+const meta = { ...dataGridMeta, title: 'Functionality Overview' }
+export default meta
 
-export const FunctionalityOverview: DataGridStory = {
+export const Default: DataGridStory = {
   parameters: storyParameters(
-    'Composes DataGrid controls, stable selection, pinning, pagination and contextual actions without introducing feature semantics.',
+    'Documents the full collection pattern: toolbar controls, stable selection, pagination, row creation, and contextual actions composed without moving product semantics into the package.',
     systemPrompt,
   ),
   render: () => (

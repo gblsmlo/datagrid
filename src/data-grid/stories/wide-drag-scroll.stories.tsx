@@ -2,11 +2,12 @@ import { WideDragScrollExample } from './data-grid-story-fixtures'
 import { dataGridMeta, type DataGridStory, storyParameters } from './data-grid-story-meta'
 import systemPrompt from './prompts/wide-drag-scroll.system-prompt.md?raw'
 
-export default dataGridMeta
+const meta = { ...dataGridMeta, title: 'Wide Drag Scroll' }
+export default meta
 
-export const WideDragScroll: DataGridStory = {
+export const Default: DataGridStory = {
   parameters: storyParameters(
-    'Demonstra overflow horizontal amplo, colunas fixadas e arraste lateral em superfícies não interativas.',
+    'Documents horizontal overflow behavior with drag scrolling and explicitly pinned edges. Drag scroll should appear only when columns exceed the wrapper width.',
     systemPrompt,
   ),
   render: () => <WideDragScrollExample />,

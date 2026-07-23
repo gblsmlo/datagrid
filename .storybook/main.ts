@@ -4,6 +4,10 @@ import { mergeConfig } from 'vite'
 
 const config: StorybookConfig = {
   addons: ['@storybook/addon-docs', '@storybook/addon-a11y'],
+  docs: {
+    autodocs: true,
+    defaultName: 'Doc',
+  },
   framework: {
     name: '@storybook/react-vite',
     options: {},
